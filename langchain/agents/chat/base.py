@@ -45,7 +45,7 @@ class ChatAgent(Agent):
 
     def _extract_tool_and_input(self, text: str) -> Optional[Tuple[str, str]]:
         if FINAL_ANSWER_ACTION in text:
-            return "Final Answer", text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            return "Final Answer", response["final_answer"]
         try:
             _, action, _ = text.split("```")
             response = json.loads(action.strip())
@@ -104,6 +104,7 @@ class ChatAgent(Agent):
             llm=llm,
             prompt=prompt,
             callback_manager=callback_manager,
+            kwargs=kwargs,
         )
         tool_names = [tool.name for tool in tools]
         return cls(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)

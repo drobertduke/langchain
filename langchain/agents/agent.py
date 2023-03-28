@@ -414,6 +414,7 @@ class AgentExecutor(Chain, BaseModel):
             output, verbose=self.verbose, color="green"
         )
         # Otherwise we lookup the tool
+        print(name_to_tool_map)
         if output.tool in name_to_tool_map:
             tool = name_to_tool_map[output.tool]
             return_direct = tool.return_direct

@@ -79,7 +79,7 @@ class LLMChain(Chain, BaseModel):
             prompt = self.prompt.format_prompt(**selected_inputs)
             _colored_text = get_colored_text(prompt.to_string(), "green")
             _text = "Prompt after formatting:\n" + _colored_text
-            self.callback_manager.on_text(_text, end="\n", verbose=self.verbose)
+            self.callback_manager.on_text(_text, end="\n", verbose=True)
             if "stop" in inputs and inputs["stop"] != stop:
                 raise ValueError(
                     "If `stop` is present in any inputs, should be present in all."
@@ -102,10 +102,10 @@ class LLMChain(Chain, BaseModel):
             _text = "Prompt after formatting:\n" + _colored_text
             if self.callback_manager.is_async:
                 await self.callback_manager.on_text(
-                    _text, end="\n", verbose=self.verbose
+                    _text, end="\n", verbose=True
                 )
             else:
-                self.callback_manager.on_text(_text, end="\n", verbose=self.verbose)
+                self.callback_manager.on_text(_text, end="\n", verbose=True)
             if "stop" in inputs and inputs["stop"] != stop:
                 raise ValueError(
                     "If `stop` is present in any inputs, should be present in all."

@@ -6,6 +6,10 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 from langchain.agents.agent import Agent
 from langchain.agents.conversational_chat.prompt import (
+    INSTRUCTION_START,
+    INSTRUCTION_SEPARATOR,
+    FINAL_ANSWER,
+    INSTRUCTION_END,
     FORMAT_INSTRUCTIONS,
     PREFIX,
     SUFFIX,
@@ -32,24 +36,35 @@ from langchain.tools.base import BaseTool
 
 
 class AgentOutputParser(BaseOutputParser):
+
     def get_format_instructions(self) -> str:
         return FORMAT_INSTRUCTIONS
 
     def parse(self, text: str) -> Any:
         cleaned_output = text.strip()
-        if "```json" in cleaned_output:
-            _, cleaned_output = cleaned_output.split("```json")
-        if "```" in cleaned_output:
-            cleaned_output, _ = cleaned_output.split("```")
-        if cleaned_output.startswith("```json"):
-            cleaned_output = cleaned_output[len("```json") :]
-        if cleaned_output.startswith("```"):
-            cleaned_output = cleaned_output[len("```") :]
-        if cleaned_output.endswith("```"):
-            cleaned_output = cleaned_output[: -len("```")]
-        cleaned_output = cleaned_output.strip()
-        response = json.loads(cleaned_output)
-        return {"action": response["action"], "action_input": response["action_input"]}
+        _, cleaned_output = cleaned_output.split(INSTRUCTION_START)
+        cleaned_output, _ = cleaned_output.split(INSTRUCTION_END)
+        if FINAL_ANSWER in cleaned_output:
+            _, final_answer = cleaned_output.split(FINAL_ANSWER)
+            return {"final_answer": final_answer}
+        action_type, action_input = cleaned_output.split(INSTRUCTION_SEPARATOR)
+        return {"action": action_type.strip(), "action_input": action_input}
+
+    # def parse(self, text: str) -> Any:
+    #     cleaned_output = text.strip()
+    #     if "```json" in cleaned_output:
+    #         _, cleaned_output = cleaned_output.split("```json")
+    #         if "```" in cleaned_output:
+    #             cleaned_output, _ = cleaned_output.split("```")
+    #     if cleaned_output.startswith("```json"):
+    #         cleaned_output = cleaned_output[len("```json") :]
+    #     if cleaned_output.startswith("```"):
+    #         cleaned_output = cleaned_output[len("```") :]
+    #     if cleaned_output.endswith("```"):
+    #         cleaned_output = cleaned_output[: -len("```")]
+    #     cleaned_output = cleaned_output.strip()
+    #     response = json.loads(cleaned_output)
+    #     return {"action": response["action"], "action_input": response["action_input"]}
 
 
 class ConversationalChatAgent(Agent):
@@ -104,6 +119,8 @@ class ConversationalChatAgent(Agent):
     def _extract_tool_and_input(self, llm_output: str) -> Optional[Tuple[str, str]]:
         try:
             response = self.output_parser.parse(llm_output)
+            if "final_answer" in response:
+                return "Final Answer", response["final_answer"]
             return response["action"], response["action_input"]
         except Exception:
             raise ValueError(f"Could not parse LLM output: {llm_output}")
@@ -113,7 +130,8 @@ class ConversationalChatAgent(Agent):
     ) -> List[BaseMessage]:
         """Construct the scratchpad that lets the agent continue its thought process."""
         thoughts: List[BaseMessage] = []
-        for action, observation in intermediate_steps:
+        if len(intermediate_steps) > 0:
+            action, observation = intermediate_steps[-1]
             thoughts.append(AIMessage(content=action.log))
             human_message = HumanMessage(
                 content=TEMPLATE_TOOL_RESPONSE.format(observation=observation)

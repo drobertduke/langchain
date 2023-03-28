@@ -18,8 +18,10 @@ API_URL_PROMPT = PromptTemplate(
 )
 
 API_RESPONSE_PROMPT_TEMPLATE = (
-    API_URL_PROMPT_TEMPLATE
-    + """ {api_url}
+    """The API was called with the following url:
+{api_url}
+
+Question: {question}
 
 Here is the response from the API:
 
@@ -31,6 +33,6 @@ Summary:"""
 )
 
 API_RESPONSE_PROMPT = PromptTemplate(
-    input_variables=["api_docs", "question", "api_url", "api_response"],
+    input_variables=["question", "api_url", "api_response"],
     template=API_RESPONSE_PROMPT_TEMPLATE,
 )

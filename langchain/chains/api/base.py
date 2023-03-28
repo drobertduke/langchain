@@ -1,5 +1,6 @@
 """Chain that makes API calls and summarizes the responses to answer a question."""
 from __future__ import annotations
+import time
 
 from typing import Any, Dict, List, Optional
 
@@ -54,7 +55,7 @@ class APIChain(Chain, BaseModel):
     def validate_api_answer_prompt(cls, values: Dict) -> Dict:
         """Check that api answer prompt expects the right variables."""
         input_vars = values["api_answer_chain"].prompt.input_variables
-        expected_vars = {"question", "api_docs", "api_url", "api_response"}
+        expected_vars = {"question", "api_url", "api_response"}
         if set(input_vars) != expected_vars:
             raise ValueError(
                 f"Input variables should be {expected_vars}, got {input_vars}"
@@ -94,7 +95,10 @@ class APIChain(Chain, BaseModel):
         """Load chain from just an LLM and the api docs."""
         get_request_chain = LLMChain(llm=llm, prompt=api_url_prompt)
         requests_wrapper = RequestsWrapper(headers=headers)
-        get_answer_chain = LLMChain(llm=llm, prompt=api_response_prompt)
+        answer_llm = llm
+        if kwargs.get("answer_llm"):
+            answer_llm = kwargs.pop("answer_llm")
+        get_answer_chain = LLMChain(llm=answer_llm, prompt=api_response_prompt)
         return cls(
             api_request_chain=get_request_chain,
             api_answer_chain=get_answer_chain,

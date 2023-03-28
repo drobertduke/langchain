@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import sys
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
+import openai
 
 from pydantic import BaseModel, Extra, Field, root_validator
 from tenacity import (
@@ -251,7 +252,10 @@ class ChatOpenAI(BaseChatModel, BaseModel):
                 {"content": inner_completion, "role": role}
             )
             return ChatResult(generations=[ChatGeneration(message=message)])
-        response = self.completion_with_retry(messages=message_dicts, **params)
+        try:
+            response = self.completion_with_retry(messages=message_dicts, **params)
+        except openai.error.OpenAIError as e:
+            return self._create_chat_result({"usage":{}, "choices": [{"message": {"content": "The tool produced a result but when the assistant tried to process the result it got this error: " + str(e), "role": "system"}}]})
         return self._create_chat_result(response)
 
     def _create_message_dicts(
